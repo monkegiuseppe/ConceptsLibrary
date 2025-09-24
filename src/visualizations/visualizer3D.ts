@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 
-// --- (Module-level state and other functions remain the same) ---
 let container: HTMLDivElement | null = null;
 let overlay: HTMLDivElement | null = null;
 let scene: THREE.Scene, camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer;
@@ -13,9 +12,45 @@ let onPointerDown: (e: PointerEvent | TouchEvent) => void;
 let onPointerUp: () => void;
 let onPointerMove: (e: PointerEvent | TouchEvent) => void;
 
+function createTextSprite(message: string, options: { fontsize?: number; fontface?: string; } = {}) {
+    const { fontface = 'Inter', fontsize = 32 } = options;
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return new THREE.Sprite(); // Return empty sprite if context fails
+
+    const font = `Bold ${fontsize}px ${fontface}`;
+    context.font = font;
+    
+    // Measure text to create a properly sized canvas
+    const metrics = context.measureText(message);
+    const textWidth = Math.ceil(metrics.width);
+    canvas.width = textWidth;
+    canvas.height = fontsize;
+    
+    // Re-set font after canvas resize (some browsers require this)
+    context.font = font;
+    context.fillStyle = 'rgba(255, 255, 255, 1.0)';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(message, textWidth / 2, fontsize / 2);
+    
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
+    
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(spriteMaterial);
+
+    // Scale sprite to a reasonable size in the 3D scene
+    // We scale based on height (fontsize) to maintain aspect ratio
+    const aspect = canvas.width / canvas.height;
+    sprite.scale.set(aspect * 2, 2, 1.0); // Adjust the '2' to make text larger/smaller
+    
+    return sprite;
+}
+
 export const vizController3D = {
     init: (containerElement: HTMLDivElement, overlayElement: HTMLDivElement) => {
-        // ... (init function is unchanged)
         if (renderer) return;
         container = containerElement;
         overlay = overlayElement;
@@ -59,7 +94,6 @@ export const vizController3D = {
         renderer.domElement.addEventListener('pointermove', onPointerMove);
     },
     
-    // --- FIX: Increased the sphere's radius again ---
     createSphere: (position = new THREE.Vector3(0,0,0)): THREE.Group => {
         const group = new THREE.Group();
         group.position.copy(position);
@@ -82,7 +116,6 @@ export const vizController3D = {
         return group;
     },
 
-    // --- FIX: Updated helper to set color and fix z-fighting ---
     createVector: (phi: number, theta: number, color = 0xffffff, length = 1.6): THREE.ArrowHelper => {
         const x = length * Math.sin(theta) * Math.cos(phi);
         const y = length * Math.sin(theta) * Math.sin(phi);
@@ -91,9 +124,7 @@ export const vizController3D = {
         const origin = new THREE.Vector3(0, 0, 0);
         
         const arrow = new THREE.ArrowHelper(dir.normalize(), origin, length, color, 0.15, 0.08);
-        
-        // This is the key fix: it tells the renderer to "pull" the arrow material
-        // slightly towards the camera, so it always draws on top of the axis lines.
+
         arrow.children.forEach(child => {
             const material = (child as THREE.Mesh).material as THREE.Material;
             material.polygonOffset = true;
@@ -104,12 +135,10 @@ export const vizController3D = {
         return arrow;
     },
     
-    // --- UPDATED ALL 3D ANIMATIONS WITH NEW CAMERA AND SIZES ---
-
     animateBlochSphere: () => {
         if (!camera || !renderer) return;
         vizController3D.reset();
-        camera.position.set(2, 2, 4); // Closer camera
+        camera.position.set(2, 2, 4); 
         camera.lookAt(0,0,0);
         sphere = vizController3D.createSphere();
         const stateVector = vizController3D.createVector(Math.PI / 4, Math.PI / 3);
@@ -120,15 +149,14 @@ export const vizController3D = {
     animateMixedState: () => {
         if (!camera || !renderer || !overlay) return;
         vizController3D.reset();
-        camera.position.set(2, 2, 4); // Closer camera
+        camera.position.set(2, 2, 4); 
         camera.lookAt(0, 0, 0);
         
         sphere = vizController3D.createSphere();
         
-        const stateDirection = new THREE.Vector3(1, 1, 1).normalize(); // Use a non-axis vector
+        const stateDirection = new THREE.Vector3(1, 1, 1).normalize(); 
         const stateVector = new THREE.ArrowHelper(stateDirection.clone(), new THREE.Vector3(0,0,0), 1.6, 0xffffff, 0.15, 0.08);
         
-        // Apply the z-fighting fix to this manually created arrow
         stateVector.children.forEach(child => {
             const material = (child as THREE.Mesh).material as THREE.Material;
             material.polygonOffset = true;
@@ -146,8 +174,7 @@ export const vizController3D = {
             
             const r = 0.55 + 0.45 * Math.sin(time / 2000);
             stateVector.setLength(r * 1.6, 0.15, 0.08);
-            
-            // --- FIX: Spinning code has been removed ---
+
 
             const r_vec = stateDirection.clone().multiplyScalar(r);
             const purity = 0.5 * (1 + r_vec.lengthSq());
@@ -173,25 +200,45 @@ export const vizController3D = {
     },
     
     animateUnitaryEvolution: () => {
-        if (!camera || !renderer) return;
+        if (!camera || !renderer || !overlay) return;
         vizController3D.reset();
         camera.position.set(2, 2, 4);
         camera.lookAt(0,0,0);
         sphere = vizController3D.createSphere();
         const startVec = new THREE.Vector3(1, 0, 0);
         const stateVector = new THREE.ArrowHelper(startVec.normalize(), new THREE.Vector3(0,0,0), 1.6, 0xffffff, 0.15, 0.08);
-        // Apply z-fighting fix
         stateVector.children.forEach(c => ((c as THREE.Mesh).material as THREE.Material).polygonOffset = true);
         sphere.add(stateVector);
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'p-4 bg-gray-900/70 rounded-lg backdrop-blur-sm';
+        overlay.appendChild(textContainer);
 
         const q = new THREE.Quaternion();
         const zAxis = new THREE.Vector3(0, 0, 1);
         const loop = (time: number) => {
             if(!renderer) return;
-            const angle = (time / 3000) * Math.PI;
-            q.setFromAxisAngle(zAxis, angle);
+            
+            const totalAngleRad = (time / 3000) * (2 * Math.PI);
+            const wrappedAngleRad = totalAngleRad % (2 * Math.PI);
+            
+            q.setFromAxisAngle(zAxis, totalAngleRad); // Use totalAngle for continuous rotation
             const newDir = startVec.clone().applyQuaternion(q);
             stateVector.setDirection(newDir);
+
+            textContainer.innerHTML = `
+              <h4 class="text-md font-semibold text-white">Live State Vector</h4>
+              <p class="text-sm text-gray-400">θ = 90.0°, φ = ${(wrappedAngleRad * 180 / Math.PI).toFixed(1)}°</p>
+              <div class="text-lg text-amber-300 mt-2">
+              $$ |\\psi\\rangle = 0.71|0\\rangle + e^{i${wrappedAngleRad.toFixed(2)}}0.71|1\\rangle $$
+              </div>`;
+            if (window.renderMathInElement) {
+                window.renderMathInElement(textContainer, {
+                    delimiters: [{ left: '$$', right: '$$', display: true }],
+                    throwOnError: false
+                });
+            }
+            
             renderer.render(scene, camera);
             animationFrameId3D = requestAnimationFrame(loop);
         };
@@ -199,7 +246,7 @@ export const vizController3D = {
     },
 
     animateMeasurement: () => {
-        if (!camera || !renderer) return;
+        if (!camera || !renderer || !overlay) return;
         vizController3D.reset();
         camera.position.set(2, 2, 4);
         camera.lookAt(0,0,0);
@@ -209,60 +256,116 @@ export const vizController3D = {
         stateVector.children.forEach(c => ((c as THREE.Mesh).material as THREE.Material).polygonOffset = true);
         sphere.add(stateVector);
 
+        const textContainer = document.createElement('div');
+        textContainer.className = 'p-4 bg-gray-900/70 rounded-lg backdrop-blur-sm';
+        overlay.appendChild(textContainer);
+        
+        const theta = Math.PI / 4; 
+        const p0 = Math.cos(theta/2)**2;
+        const p1 = Math.sin(theta/2)**2;
+
+        textContainer.innerHTML = `
+          <h4 class="text-md font-semibold text-white">Probabilities</h4>
+          <p class="text-blue-400">P(|0⟩) = cos²(θ/2) = ${p0.toFixed(2)}</p>
+          <p class="text-red-400">P(|1⟩) = sin²(θ/2) = ${p1.toFixed(2)}</p>
+          <p class="text-gray-400 mt-2 italic">Collapsing...</p>`;
+
         let phase = 'measuring';
         let outcomeVec = new THREE.Vector3(0,0,1);
         const animateState = { startTime: performance.now() };
+
         const loop = (time: number) => {
             if(!renderer) return;
             const elapsedTime = time - animateState.startTime;
-             if (phase === 'measuring' && elapsedTime > 500) {
+             if (phase === 'measuring' && elapsedTime > 1500) {
                 phase = 'collapsing';
                 animateState.startTime = time;
-                outcomeVec = Math.random() < 0.5 ? new THREE.Vector3(0,0,1) : new THREE.Vector3(0,0,-1);
+                outcomeVec = Math.random() < p0 ? new THREE.Vector3(0,0,1) : new THREE.Vector3(0,0,-1);
+                const resultText = outcomeVec.z > 0 ? '|0⟩' : '|1⟩';
+                textContainer.innerHTML += `<p class="mt-2 text-xl text-amber-300">Measured ${resultText}!</p>`;
             } else if (phase === 'collapsing') {
                 const progress = Math.min(1, elapsedTime / 800);
                 const newDir = new THREE.Vector3().lerpVectors(startVec, outcomeVec, progress);
                 stateVector.setDirection(newDir.normalize());
                 stateVector.setLength(1.6);
-                if(progress === 1) {
-                    phase = 'resetting';
-                    animateState.startTime = time;
-                }
-            } else if (phase === 'resetting' && elapsedTime > 2000) {
-                phase = 'measuring';
-                animateState.startTime = time;
-                stateVector.setDirection(startVec);
+                if(progress === 1) phase = 'done';
             }
             renderer.render(scene, camera);
-            animationFrameId3D = requestAnimationFrame(loop);
+            if (phase !== 'done') animationFrameId3D = requestAnimationFrame(loop);
         };
         vizController3D.animate(loop);
     },
 
-    animateBellState: () => {
-        if (!camera || !renderer) return;
+    animateBellStateCreation: () => {
+        if (!camera || !renderer || !overlay) return;
         vizController3D.reset();
-        camera.position.set(2.5, 2.5, 7);
-        camera.lookAt(0,0,0);
-        const group = new THREE.Group();
-        const sphere1 = vizController3D.createSphere(new THREE.Vector3(-2.2, 0, 0));
-        const sphere2 = vizController3D.createSphere(new THREE.Vector3(2.2, 0, 0));
-        const vector1 = vizController3D.createVector(0,0, 0xffffff, 1.6);
-        const vector2 = vizController3D.createVector(0,0, 0xffffff, 1.6);
-        sphere1.add(vector1);
-        sphere2.add(vector2);
-        group.add(group);
-        scene.add(group);
-        twoSpheres = [sphere1, sphere2];
-        const material = new THREE.LineBasicMaterial({ color: 0x6b7280 });
-        const points = [new THREE.Vector3(-2, 0, 0), new THREE.Vector3(2, 0, 0)];
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const line = new THREE.Line(geometry, material);
-        group.add(line);
-        // ... (rest of bell state logic is fine)
+        camera.position.set(0, 2.5, 8); // Adjusted camera for better view
+        camera.lookAt(0, 0, 0);
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'p-4 bg-gray-900/70 rounded-lg backdrop-blur-sm';
+        overlay.appendChild(textContainer);
+
+        const sphereA = vizController3D.createSphere(new THREE.Vector3(-2.5, 0, 0));
+        const sphereB = vizController3D.createSphere(new THREE.Vector3(2.5, 0, 0));
+
+        const vecA = vizController3D.createVector(0, 0); // Starts at |0>
+        const vecB = vizController3D.createVector(0, 0); // Starts at |0>
+        sphereA.add(vecA);
+        sphereB.add(vecB);
+        
+        const startQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), 0);
+        const endQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), -Math.PI/2);
+
+        // --- NEW: Visual cues for gates ---
+        const hadamardSymbol = createTextSprite('H', { fontsize: 32 });
+        hadamardSymbol.position.set(-2.5, 1.8, 0);
+        hadamardSymbol.visible = false;
+        scene.add(hadamardSymbol);
+        
+        const cnotLineMaterial = new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0 });
+        const cnotLineGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-2.5,0,0), new THREE.Vector3(2.5,0,0)]);
+        const cnotLine = new THREE.Line(cnotLineGeometry, cnotLineMaterial);
+        scene.add(cnotLine);
+
+        const loop = (time: number) => {
+            if(!renderer) return;
+            const progress = Math.min((performance.now() - startTime) / 8000, 1);
+            
+            if (progress < 0.33) {
+                textContainer.innerHTML = `<h4>Step 1: Apply Hadamard to Qubit A</h4><p>State: |+⟩|0⟩</p>`;
+                hadamardSymbol.visible = true;
+                const p = progress / 0.33;
+                const currentQuat = new THREE.Quaternion().slerpQuaternions(startQuat, endQuat, p);
+                vecA.quaternion.copy(currentQuat);
+
+            } else if (progress < 0.66) {
+                hadamardSymbol.visible = false;
+                textContainer.innerHTML = `<h4>Step 2: Apply CNOT(A, B)</h4><p>Correlating the qubits...</p>`;
+                const p = (progress - 0.33) / 0.33;
+                cnotLineMaterial.opacity = Math.sin(p * Math.PI);
+                vecA.setLength(1.6 * (1 - p), 0.15, 0.08);
+                vecB.setLength(1.6 * (1 - p), 0.15, 0.08);
+            
+            } else {
+                cnotLineMaterial.opacity = 0;
+                textContainer.innerHTML = `<h4 class="text-amber-300">Result: Entangled Bell State |Φ⁺⟩</h4><p>Individual states are undefined. Measurements are correlated.</p>`;
+                vecA.setLength(0, 0, 0);
+                vecB.setLength(0, 0, 0);
+
+                const flash = 0.5 + 0.5 * Math.sin(performance.now() / 200);
+                (cnotLine.material as THREE.LineBasicMaterial).color.setHex(0xffffff);
+                (cnotLine.material as THREE.LineBasicMaterial).opacity = flash;
+            }
+
+            renderer.render(scene, camera);
+            animationFrameId3D = requestAnimationFrame(loop);
+        };
+        const startTime = performance.now();
+        vizController3D.animate(loop);
     },
+
     
-    // ... (rest of the controller: animate, reset, resize, cleanup)
     animate: (loopCallback: ((time: number) => void) | null = null) => {
         if (animationFrameId3D) cancelAnimationFrame(animationFrameId3D);
         const loop = loopCallback || function animateLoop() {

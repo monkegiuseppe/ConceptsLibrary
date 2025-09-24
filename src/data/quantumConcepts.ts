@@ -34,14 +34,14 @@ export const library: QuantumConcept[] = [
         animation: (controller) => (controller as VizController3D).animateUnitaryEvolution()
     },
     {
-        id: 'bell-state',
-        title: "Bell State (Entanglement)",
+        id: 'bell-state-circuit',
+        title: "Bell State (Creation Circuit)",
         group: 'Core Concepts',
         vizType: '3d',
-        description: "A maximally entangled two-qubit state. The measurement outcomes of the qubits are perfectly correlated, no matter how far apart they are.",
-        matrixLatex: "$$ |\\Phi^+\\rangle = \\frac{1}{\\sqrt{2}}(|00\\rangle + |11\\rangle) $$",
-        mathExplanation: "<p>An entangled state cannot be written as a tensor product of individual qubit states, i.e., $|\\psi\\rangle \\neq |a\\rangle \\otimes |b\\rangle$.</p><p>If you take the partial trace to find the state of a single qubit, you get a maximally mixed state $\\rho = \\frac{1}{2}I$, which lies at the center of the Bloch sphere. All information is in the correlation between the qubits, not in the qubits themselves.</p>",
-        animation: (controller) => (controller as VizController3D).animateBellState()
+        description: "How the simplest entangled state is created from two unentangled qubits using a Hadamard and a CNOT gate.",
+        matrixLatex: "$$ |00\\rangle \\xrightarrow{H \\otimes I} \\frac{1}{\\sqrt{2}}(|00\\rangle + |10\\rangle) \\xrightarrow{CNOT} \\frac{1}{\\sqrt{2}}(|00\\rangle + |11\\rangle) $$",
+        mathExplanation: "<p>Entanglement is created by a sequence of operations:</p><ol class='list-decimal list-inside space-y-2'><li>A Hadamard gate is applied to the first qubit, putting it into an equal superposition of |0⟩ and |1⟩.</li><li>A CNOT gate is applied, with the first qubit as the control and the second as the target. This correlates the two qubits.</li></ol><p>After these operations, the qubits' individual states are undefined, but their measurement outcomes will always be the same.</p>",
+        animation: (controller) => (controller as VizController3D).animateBellStateCreation()
     },
     {
         id: 'eigen-values',
@@ -75,12 +75,12 @@ export const library: QuantumConcept[] = [
     },
     {
         id: 'outer-product',
-        title: "Outer Product",
+        title: "Outer Product (Operator)",
         group: 'Math Operations',
         vizType: '2d',
-        description: "Creates an operator (a matrix) from two vectors. A key building block for projectors.",
-        matrixLatex: "$$ |\\psi\\rangle\\langle\\phi| $$",
-        mathExplanation: "<p>The outer product of $|\\psi\\rangle = \\begin{pmatrix} c \\\\ d \\end{pmatrix}$ and $|\\phi\\rangle = \\begin{pmatrix} a \\\\ b \\end{pmatrix}$ forms an operator:</p>$$ |\\psi\\rangle\\langle\\phi| = \\begin{pmatrix} c \\\\ d \\end{pmatrix} \\begin{pmatrix} a^* & b^* \\end{pmatrix} = \\begin{pmatrix} ca^* & cb^* \\\\ da^* & db^* \\end{pmatrix} $$<p>An operator like $|\\psi\\rangle\\langle\\psi|$ is a projector onto the state $|\\psi\\rangle$.</p>",
+        description: "Creates a transformation operator from two vectors. The animation shows how this new operator transforms the basis vectors |0⟩ and |1⟩.",
+        matrixLatex: "$$ A = |\\psi\\rangle\\langle\\phi| $$",
+        mathExplanation: "<p>An outer product creates a matrix (an operator). This operator's behavior is defined by the two vectors used to create it.</p><p>When applied to a basis state like |0⟩, it first calculates the inner product ⟨φ|0⟩ (a number), then creates a new vector by scaling |ψ⟩ by that amount. The final result is: A|0⟩ = ⟨φ|0⟩|ψ⟩.</p>",
         animation: (controller) => (controller as VizController2D).animateOuterProduct()
     },
     {

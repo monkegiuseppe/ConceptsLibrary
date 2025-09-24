@@ -241,27 +241,39 @@ export const vizController2D = {
 
     animateOuterProduct: () => {
         isTwoQubitSystem = false;
-        const phi = { angle: 30, length: 8, color: '#a78bfa', label: "|φ⟩" }; 
-        const psi = { angle: 120, length: 8, color: '#facc15', label: "|ψ⟩" }; 
-        const phiRad = (phi.angle) * Math.PI / 180;
-        const ket0_proj = Math.cos(phiRad);
-        const ket1_proj = Math.sin(phiRad);
-        const endAngle = psi.angle;
+        
+        const psi = { angle: 120, length: 8, color: '#a78bfa', label: "|ψ⟩ (direction)" };
+        const phi = { angle: 30, length: 8, color: '#facc15', label: "|φ⟩ (projection)" };
+        
+        // Calculate the final vectors. A|0> = <φ|0>|ψ> and A|1> = <φ|1>|ψ>
+        const c0 = Math.cos(phi.angle * Math.PI / 180); // <φ|0>
+        const c1 = Math.sin(phi.angle * Math.PI / 180); // <φ|1> (Note: sin for 90 deg rotation)
+
+        const finalVec0 = { angle: psi.angle, length: c0 * psi.length, color: '#60a5fa', label: "A|0⟩" };
+        const finalVec1 = { angle: psi.angle, length: c1 * psi.length, color: '#f87171', label: "A|1⟩" };
+
+        const initialVec0 = { angle: 0, length: 8 };
+        const initialVec1 = { angle: 90, length: 8 };
+        
         animate2D(p => {
-            const p0_angle = 0 + (endAngle - 0) * p;
-            const p0_len = 8 * (1-p) + Math.abs(ket0_proj) * psi.length * p;
-            const p1_angle = 90 + (endAngle - 90) * p;
-            const p1_len = 8 * (1-p) + Math.abs(ket1_proj) * psi.length * p;
+            const currentAngle0 = initialVec0.angle + (finalVec0.angle - initialVec0.angle) * p;
+            const currentLength0 = initialVec0.length + (finalVec0.length - initialVec0.length) * p;
+            
+            const currentAngle1 = initialVec1.angle + (finalVec1.angle - initialVec1.angle) * p;
+            const currentLength1 = initialVec1.length + (finalVec1.length - initialVec1.length) * p;
+
             currentVectors = [
-                { angle: p0_angle, length: p0_len, color: '#60a5fa', label: "A|0⟩" },
-                { angle: p1_angle, length: p1_len, color: '#f87171', label: "A|1⟩" }
+                {...finalVec0, angle: currentAngle0, length: currentLength0 },
+                {...finalVec1, angle: currentAngle1, length: currentLength1 }
             ];
-             extraVisuals = [
-                () => drawVectorGuide(phi.angle, phi.length, phi.color, "|φ⟩ (proj)"),
-                () => drawVectorGuide(psi.angle, psi.length, psi.color, "|ψ⟩ (dir)")
+            
+            extraVisuals = [
+                () => drawVectorGuide(psi.angle, psi.length, psi.color, "|ψ⟩"),
+                () => drawVectorGuide(phi.angle, phi.length, phi.color, "|φ⟩")
             ];
+            
             drawScene2D();
-        });
+        }, 3000);
     },
 
 
@@ -295,7 +307,7 @@ export const vizController2D = {
         animate2D(p => {
             currentVectors = [psi];
             extraVisuals = [
-                () => {
+                () => { // Projection line
                     if(!ctx) return;
                     ctx.save();
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
@@ -311,14 +323,24 @@ export const vizController2D = {
                     ctx.stroke();
                     ctx.restore();
                 },
-                () => { drawVector(0, projLength * p, '#ffffff', `P₀|ψ⟩`); }
+                () => { drawVector(0, projLength * p, '#ffffff', `P₀|ψ⟩`); },
+                () => { 
+                    if (!ctx) return;
+                    const amplitude = Math.cos(psi.angle * Math.PI / 180).toFixed(2);
+                    const probability = (Math.cos(psi.angle * Math.PI / 180)**2).toFixed(2);
+                    ctx.font = '14px Inter';
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`Amplitude ⟨0|ψ⟩: ${amplitude}`, 10, 20);
+                    ctx.fillText(`Probability |⟨0|ψ⟩|²: ${probability}`, 10, 40);
+                }
             ];
             drawScene2D();
         });
     },
 
     animateLocalOperator: () => {
-        isTwoQubitSystem = false; // We are manually drawing the two qubits
+        isTwoQubitSystem = false; 
         currentVectors = [];
         
         const qubit1_start_angle = 0;   // |0>
