@@ -17,18 +17,16 @@ function createTextSprite(message: string, options: { fontsize?: number; fontfac
 
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    if (!context) return new THREE.Sprite(); // Return empty sprite if context fails
+    if (!context) return new THREE.Sprite(); 
 
     const font = `Bold ${fontsize}px ${fontface}`;
     context.font = font;
-    
-    // Measure text to create a properly sized canvas
+
     const metrics = context.measureText(message);
     const textWidth = Math.ceil(metrics.width);
     canvas.width = textWidth;
     canvas.height = fontsize;
     
-    // Re-set font after canvas resize (some browsers require this)
     context.font = font;
     context.fillStyle = 'rgba(255, 255, 255, 1.0)';
     context.textAlign = 'center';
@@ -41,10 +39,8 @@ function createTextSprite(message: string, options: { fontsize?: number; fontfac
     const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
     const sprite = new THREE.Sprite(spriteMaterial);
 
-    // Scale sprite to a reasonable size in the 3D scene
-    // We scale based on height (fontsize) to maintain aspect ratio
     const aspect = canvas.width / canvas.height;
-    sprite.scale.set(aspect * 2, 2, 1.0); // Adjust the '2' to make text larger/smaller
+    sprite.scale.set(aspect * 2, 2, 1.0); 
     
     return sprite;
 }
@@ -222,7 +218,7 @@ export const vizController3D = {
             const totalAngleRad = (time / 3000) * (2 * Math.PI);
             const wrappedAngleRad = totalAngleRad % (2 * Math.PI);
             
-            q.setFromAxisAngle(zAxis, totalAngleRad); // Use totalAngle for continuous rotation
+            q.setFromAxisAngle(zAxis, totalAngleRad); 
             const newDir = startVec.clone().applyQuaternion(q);
             stateVector.setDirection(newDir);
 
@@ -299,7 +295,7 @@ export const vizController3D = {
     animateBellStateCreation: () => {
         if (!camera || !renderer || !overlay) return;
         vizController3D.reset();
-        camera.position.set(0, 2.5, 8); // Adjusted camera for better view
+        camera.position.set(0, 2.5, 8);
         camera.lookAt(0, 0, 0);
 
         const textContainer = document.createElement('div');
@@ -309,15 +305,14 @@ export const vizController3D = {
         const sphereA = vizController3D.createSphere(new THREE.Vector3(-2.5, 0, 0));
         const sphereB = vizController3D.createSphere(new THREE.Vector3(2.5, 0, 0));
 
-        const vecA = vizController3D.createVector(0, 0); // Starts at |0>
-        const vecB = vizController3D.createVector(0, 0); // Starts at |0>
+        const vecA = vizController3D.createVector(0, 0); 
+        const vecB = vizController3D.createVector(0, 0);
         sphereA.add(vecA);
         sphereB.add(vecB);
         
         const startQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), 0);
         const endQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), -Math.PI/2);
 
-        // --- NEW: Visual cues for gates ---
         const hadamardSymbol = createTextSprite('H', { fontsize: 32 });
         hadamardSymbol.position.set(-2.5, 1.8, 0);
         hadamardSymbol.visible = false;
@@ -330,7 +325,7 @@ export const vizController3D = {
 
         const loop = (time: number) => {
             if(!renderer) return;
-            const progress = Math.min((performance.now() - startTime) / 8000, 1);
+            const progress = Math.min((time - startTime) / 8000, 1);
             
             if (progress < 0.33) {
                 textContainer.innerHTML = `<h4>Step 1: Apply Hadamard to Qubit A</h4><p>State: |+⟩|0⟩</p>`;
